@@ -11,6 +11,9 @@ services:
       - "8001:8000"
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/user_db
+      JWT_SECRET_KEY: "your-super-secret-jwt-key-change-in-production-min-32-chars"
+      JWT_ALGORITHM: "HS256"
+      JWT_EXPIRATION_MINUTES: "60"
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,6 +47,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/order_db
       PRODUCT_API_URL: "http://product:8000"
+      JWT_SECRET_KEY: "your-super-secret-jwt-key-change-in-production-min-32-chars"
+      JWT_ALGORITHM: "HS256"
     depends_on:
       postgres:
         condition: service_healthy
