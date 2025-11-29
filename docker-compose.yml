@@ -1,0 +1,87 @@
+services:
+
+  user-api:
+    build:
+      context: ../user
+      dockerfile: Dockerfile.local
+    container_name: user
+    volumes:
+      - ../user/app:/app/app
+    ports:
+      - "8001:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/user_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+  product-api:
+    build:
+      context: ../product
+      dockerfile: Dockerfile.local
+    container_name: product
+    volumes:
+      - ../product/app:/app/app
+    ports:
+      - "8002:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/product_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+  order-api:
+    build:
+      context: ../order
+      dockerfile: Dockerfile.local
+    container_name: order
+    volumes:
+      - ../order/app:/app/app
+    ports:
+      - "8003:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/order_db
+      PRODUCT_API_URL: "http://product:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+  payment-api:
+    build:
+      context: ../payment
+      dockerfile: Dockerfile.local
+    container_name: payment
+    volumes:
+      - ../payment/app:/app/app
+    ports:
+      - "8004:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/payment_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
