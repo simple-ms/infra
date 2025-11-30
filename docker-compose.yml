@@ -1,19 +1,47 @@
 services:
+  api-gateway:
+    build:
+      context: ../gateway
+      dockerfile: Dockerfile.local
+    container_name: api-gateway
+    image: api-gateway
+    volumes:
+      - ../gateway/app:/app/app
+    ports:
+      - "8000:8000"
+    environment:
+      USER_SERVICE_URL: "http://user-api:8000"
+      PRODUCT_SERVICE_URL: "http://product-api:8000"
+      ORDER_SERVICE_URL: "http://order-api:8000"
+      PAYMENT_SERVICE_URL: "http://payment-api:8000"
+      JWT_SECRET_KEY: "your-super-secret-jwt-key-change-in-production-min-32-chars"
+      JWT_ALGORITHM: "HS256"
+      ISSUER: "user-service"
+      AUDIENCE: "fastapi-app"
+    depends_on:
+      - user-api
+      - product-api
+      - order-api
+      - payment-api
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
   user-api:
     build:
       context: ../user
       dockerfile: Dockerfile.local
-    container_name: user
+    container_name: user-api
+    image: user-api
     volumes:
       - ../user/app:/app/app
-    ports:
-      - "8001:8000"
+    expose:
+      - "8000"
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/user_db
       JWT_SECRET_KEY: "your-super-secret-jwt-key-change-in-production-min-32-chars"
       JWT_ALGORITHM: "HS256"
       JWT_EXPIRATION_MINUTES: "60"
+      ISSUER: "user-service"
+      AUDIENCE: "fastapi-app"
     depends_on:
       postgres:
         condition: service_healthy
@@ -23,11 +51,12 @@ services:
     build:
       context: ../product
       dockerfile: Dockerfile.local
-    container_name: product
+    container_name: product-api
+    image: product-api
     volumes:
       - ../product/app:/app/app
-    ports:
-      - "8002:8000"
+    expose:
+      - "8000"
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/product_db
     depends_on:
@@ -39,16 +68,19 @@ services:
     build:
       context: ../order
       dockerfile: Dockerfile.local
-    container_name: order
+    container_name: order-api
+    image: order-api
     volumes:
       - ../order/app:/app/app
-    ports:
-      - "8003:8000"
+    expose:
+      - "8000"
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/order_db
-      PRODUCT_API_URL: "http://product:8000"
+      PRODUCT_API_URL: "http://product-api:8000"
       JWT_SECRET_KEY: "your-super-secret-jwt-key-change-in-production-min-32-chars"
       JWT_ALGORITHM: "HS256"
+      ISSUER: "user-service"
+      AUDIENCE: "fastapi-app"
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,11 +90,12 @@ services:
     build:
       context: ../payment
       dockerfile: Dockerfile.local
-    container_name: payment
+    container_name: payment-api
+    image: payment-api
     volumes:
       - ../payment/app:/app/app
-    ports:
-      - "8004:8000"
+    expose:
+      - "8000"
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/payment_db
     depends_on:
@@ -83,7 +116,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
