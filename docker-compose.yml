@@ -1,29 +1,16 @@
 services:
-  api-gateway:
-    build:
-      context: ../gateway
-      dockerfile: Dockerfile.local
-    container_name: api-gateway
-    image: api-gateway
-    volumes:
-      - ../gateway/app:/app/app
+  nginx-gateway:
+    image: nginx:alpine
+    container_name: nginx-gateway
     ports:
-      - "8000:8000"
-    environment:
-      USER_SERVICE_URL: "http://user-api:8000"
-      PRODUCT_SERVICE_URL: "http://product-api:8000"
-      ORDER_SERVICE_URL: "http://order-api:8000"
-      PAYMENT_SERVICE_URL: "http://payment-api:8000"
-      JWT_SECRET_KEY: "your-super-secret-jwt-key-change-in-production-min-32-chars"
-      JWT_ALGORITHM: "HS256"
-      ISSUER: "user-service"
-      AUDIENCE: "fastapi-app"
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - user-api
       - product-api
       - order-api
       - payment-api
-    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
   user-api:
     build:
