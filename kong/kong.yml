@@ -1,0 +1,112 @@
+_format_version: "3.0"
+
+services:
+  # --- AUTH SERVICE ---
+  - name: auth-service
+    url: http://auth-api:8000
+    routes:
+      - name: auth-routes
+        paths: 
+          - /auth
+        strip_path: false
+
+  # --- USER SERVICE ---
+  - name: user-service
+    url: http://user-api:8000
+    routes:
+      - name: user-routes
+        paths: 
+          - /users
+        strip_path: false
+    plugins:
+      - name: jwt
+        config: 
+          secret_is_base64: false
+          header_names: ["Authorization"]
+
+  # --- ORDER SERVICE ---
+  - name: order-service
+    url: http://order-api:8000
+    routes:
+      - name: order-routes
+        paths: 
+          - /order
+        strip_path: false
+    plugins:
+      - name: jwt
+      # This Lua script extracts user_id from the Token and injects it as a Header
+      - name: pre-function
+        config:
+          access:
+            - |
+              local jwt_decoder = require "kong.plugins.jwt.jwt_parser"
+              local kong = kong
+              
+              local token = kong.request.get_header("Authorization")
+              if token then
+                if token:find("Bearer") then
+                  token = token:sub(8)
+                end
+                
+                local jwt, err = jwt_decoder:new(token)
+                if jwt then
+                  local claims = jwt.claims
+                  kong.service.request.set_header("X-User-Id", claims.user_id)
+                  kong.service.request.set_header("X-User-Email", claims.email)
+                end
+              end
+
+  # --- PRODUCT SERVICE ---
+  - name: product-service
+    url: http://product-api:8000
+    routes:
+      - name: product-routes
+        paths: 
+          - /product
+        strip_path: false
+    plugins:
+      - name: jwt
+
+  # --- DOCUMENTATION ROUTES ---
+
+  - name: auth-docs
+    url: http://auth-api:8000
+    routes:
+      - name: auth-docs-ui
+        paths: ["/docs/auth", "/openapi.json/auth"]
+        strip_path: false
+
+  - name: user-docs
+    url: http://user-api:8000
+    routes:
+      - name: user-docs-ui
+        paths: ["/docs/user", "/openapi.json/user"]
+        strip_path: false
+        
+  - name: product-docs
+    url: http://product-api:8000
+    routes:
+      - name: product-docs-ui
+        paths: ["/docs/product", "/openapi.json/product"]
+        strip_path: false
+
+  - name: order-docs
+    url: http://order-api:8000
+    routes:
+      - name: order-docs-ui
+        paths: ["/docs/order", "/openapi.json/order"]
+        strip_path: false
+
+  - name: payment-docs
+    url: http://payment-api:8000
+    routes:
+      - name: payment-docs-ui
+        paths: ["/docs/payment", "/openapi.json/payment"]
+        strip_path: false
+
+consumers:
+  - username: app-user
+    jwt_secrets:
+      # - id: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      - key: "your-super-secret-jwt-key-change-in-production-min-32-chars"
+        algorithm: "HS256"

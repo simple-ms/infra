@@ -1,0 +1,132 @@
+services:
+  kong:
+    image: kong:3.7.0
+    container_name: kong-gateway
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - ./kong/kong.yml:/usr/local/kong/declarative/kong.yml
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+      KONG_PLUGINS: bundled
+    ports:
+      - "80:8000"   # Proxy Port (Your API)
+      - "8001:8001" # Admin API (For debugging)
+    depends_on:
+      - auth-api
+      - user-api
+      - order-api
+      - product-api
+      - payment-api
+
+  auth-api:
+    build:
+      context: ../auth
+      dockerfile: Dockerfile.local
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/user_db
+      JWT_SECRET_KEY: "your-super-secret-jwt-key-change-in-production-min-32-chars"
+      JWT_ALGORITHM: "HS256"
+      JWT_EXPIRATION_MINUTES: "60"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+  user-api:
+    build:
+      context: ../user
+      dockerfile: Dockerfile.local
+    container_name: user-api
+    image: user-api
+    volumes:
+      - ../user/app:/app/app
+    expose:
+      - "8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/user_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+  product-api:
+    build:
+      context: ../product
+      dockerfile: Dockerfile.local
+    container_name: product-api
+    image: product-api
+    volumes:
+      - ../product/app:/app/app
+    expose:
+      - "8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/product_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+  order-api:
+    build:
+      context: ../order
+      dockerfile: Dockerfile.local
+    container_name: order-api
+    image: order-api
+    volumes:
+      - ../order/app:/app/app
+    expose:
+      - "8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/order_db
+      PRODUCT_API_URL: "http://product-api:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+  payment-api:
+    build:
+      context: ../payment
+      dockerfile: Dockerfile.local
+    container_name: payment-api
+    image: payment-api
+    volumes:
+      - ../payment/app:/app/app
+    expose:
+      - "8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/payment_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
