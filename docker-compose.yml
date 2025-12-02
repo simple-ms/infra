@@ -4,8 +4,10 @@ services:
     container_name: kong-gateway
     ulimits:
       nofile:
-        soft: 65536
-        hard: 65536
+        # soft: 65536
+        # hard: 65536
+        soft: 512
+        hard: 512
     volumes:
       - ./kong/kong.yml:/usr/local/kong/declarative/kong.yml
     environment:
@@ -16,7 +18,11 @@ services:
       KONG_PROXY_ERROR_LOG: /dev/stderr
       KONG_ADMIN_ERROR_LOG: /dev/stderr
       KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
-      KONG_PLUGINS: bundled
+      # KONG_PLUGINS: bundled
+      KONG_PLUGINS: jwt,pre-function
+      KONG_WORKER_PROCESSES: 1
+      KONG_MEM_CACHE_SIZE: "64m"
+      KONG_NGINX_HTTP_LUA_SHARED_DICT: "kong 32m"
     ports:
       - "80:8000"   # Proxy Port (Your API)
       - "8001:8001" # Admin API (For debugging)
@@ -56,7 +62,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    command: >
+      sh -c "alembic upgrade head && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
 
   product-api:
     build:
