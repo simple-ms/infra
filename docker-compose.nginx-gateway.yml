@@ -7,10 +7,34 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
+      - auth-api
       - user-api
       - product-api
       - order-api
       - payment-api
+
+  auth-api:
+    build:
+      context: ../auth
+      dockerfile: Dockerfile.local
+    container_name: auth-api
+    image: auth-api
+    volumes:
+      - ../auth/app:/app/app
+    expose:
+      - "8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/auth_db
+      JWT_SECRET_KEY: "your-super-secret-jwt-key-change-in-production-min-32-chars"
+      JWT_ALGORITHM: "HS256"
+      JWT_EXPIRATION_MINUTES: "60"
+      REFRESH_TOKEN_EXPIRATION_DAYS: "7"
+      ISSUER: "auth-service"
+      AUDIENCE: "fastapi-app"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
   user-api:
     build:
