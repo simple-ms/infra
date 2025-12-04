@@ -14,44 +14,20 @@ services:
       - order-api
       - payment-api
 
-  # # --- KAFKA (KRaft Mode) ---
-  # kafka:
-  #   image: bitnami/kafka:3.5
-  #   container_name: kafka
-  #   environment:
-  #     # KRaft settings
-  #     KAFKA_CFG_NODE_ID: 1
-  #     KAFKA_CFG_PROCESS_ROLES: controller,broker
-  #     KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-  #     KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-  #     KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-  #     KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-  #     KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-  #     KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-  #   ports:
-  #     - "9092:9092"
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server kafka:9092 --list"]
-  #     interval: 5s
-  #     retries: 10
-  
   # --- KAFKA (KRaft Mode) ---
-  # kafka Service - Using Official Apache Image
   kafka:
-    image: apache/kafka:4.1.1 # Use the corresponding official version tag
+    image: apache/kafka:4.1.1
     container_name: kafka
     environment:
-      # KRaft settings (Keys are slightly different for the official image)
-      # --- Official Apache Kafka Image Key Changes ---
-      KAFKA_NODE_ID: 1 # Was KAFKA_CFG_NODE_ID
-      KAFKA_PROCESS_ROLES: controller,broker # Was KAFKA_CFG_PROCESS_ROLES
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093 # Was KAFKA_CFG_CONTROLLER_QUORUM_VOTERS
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093 # Was KAFKA_CFG_LISTENERS
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092 # Was KAFKA_CFG_ADVERTISED_LISTENERS
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT # Was KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER # Was KAFKA_CFG_CONTROLLER_LISTENER_NAMES
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT # Was KAFKA_CFG_INTER_BROKER_LISTENER_NAME
-      KAFKA_LOG_DIRS: "/tmp/kraft-storage" # ADDED: Required for the official image
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_LOG_DIRS: "/tmp/kraft-storage"
     ports:
       - "9092:9092"
     healthcheck:
@@ -66,7 +42,7 @@ services:
     environment:
       POSTGRES_DB: auth_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-postgres}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -78,7 +54,7 @@ services:
     environment:
       POSTGRES_DB: user_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${USER_DB_PASSWORD:-postgres}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -90,7 +66,7 @@ services:
     environment:
       POSTGRES_DB: product_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${PRODUCT_DB_PASSWORD:-postgres}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -102,7 +78,7 @@ services:
     environment:
       POSTGRES_DB: order_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${ORDER_DB_PASSWORD:-postgres}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -114,7 +90,7 @@ services:
     environment:
       POSTGRES_DB: payment_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${PAYMENT_DB_PASSWORD:-postgres}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -130,11 +106,11 @@ services:
     volumes:
       - ../auth/app:/app/app
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@auth-db:5432/auth_db
-      JWT_SECRET_KEY: "super-secret-key"
-      JWT_ALGORITHM: "HS256"
-      JWT_EXPIRATION_MINUTES: "15"     # Short Access Token
-      JWT_REFRESH_EXPIRATION_DAYS: "7" # Long Refresh Token
+      DATABASE_URL: postgresql+asyncpg://postgres:${AUTH_DB_PASSWORD:-postgres}@auth-db:5432/auth_db
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-15}
+      JWT_REFRESH_EXPIRATION_DAYS: ${JWT_REFRESH_EXPIRATION_DAYS:-7}
     depends_on:
       auth-db:
         condition: service_healthy
@@ -149,7 +125,7 @@ services:
     volumes:
       - ../user/app:/app/app
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@user-db:5432/user_db
+      DATABASE_URL: postgresql+asyncpg://postgres:${USER_DB_PASSWORD:-postgres}@user-db:5432/user_db
     depends_on:
       user-db:
         condition: service_healthy
@@ -164,8 +140,8 @@ services:
     volumes:
       - ../product/app:/app/app
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@product-db:5432/product_db
-      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      DATABASE_URL: postgresql+asyncpg://postgres:${PRODUCT_DB_PASSWORD:-postgres}@product-db:5432/product_db
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
     depends_on:
       product-db:
         condition: service_healthy
@@ -182,9 +158,9 @@ services:
     volumes:
       - ../order/app:/app/app
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@order-db:5432/order_db
-      PRODUCT_API_URL: "http://product-api:8000"
-      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      DATABASE_URL: postgresql+asyncpg://postgres:${ORDER_DB_PASSWORD:-postgres}@order-db:5432/order_db
+      PRODUCT_API_URL: ${PRODUCT_API_URL:-http://product-api:8000}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
     depends_on:
       order-db:
         condition: service_healthy
@@ -201,8 +177,8 @@ services:
     volumes:
       - ../payment/app:/app/app
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@payment-db:5432/payment_db
-      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      DATABASE_URL: postgresql+asyncpg://postgres:${PAYMENT_DB_PASSWORD:-postgres}@payment-db:5432/payment_db
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
     depends_on:
       payment-db:
         condition: service_healthy
