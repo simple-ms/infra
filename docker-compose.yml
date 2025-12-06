@@ -64,8 +64,8 @@ services:
     container_name: pgadmin
     ports:
       - "5050:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
+    # volumes:
+    #   - pgadmin_data:/var/lib/pgadmin
 
   # --- DATABASES ---
   auth-db:
