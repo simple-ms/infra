@@ -23,16 +23,14 @@ help:
 
 # Start services
 up:
-# 	docker compose up -d
-# 	docker compose logs --build | tee logs.txt
-# 	docker compose up --build > logs.txt 2>&1
-	rm -f logs.txt
-	docker compose up --build -d
-	docker compose logs -f | tee logs.txt
+ 	docker compose down -v
+	docker compose up --build
 
 # Start services with logging
 up-logs:
-	./start-with-logs.sh
+	rm -f logs.txt
+	docker compose up --build -d
+	docker compose logs -f | tee logs.txt
 
 # Stop services
 down:
@@ -40,6 +38,7 @@ down:
 
 # Stop services and remove volumes
 down-v:
+	rm -f logs.txt
 	docker compose down -v
 
 # Restart services
@@ -61,7 +60,7 @@ build:
 # Clean everything
 clean:
 	docker compose down -v --remove-orphans
-	rm -f docker-compose-logs.txt
+	rm -f logs.txt
 
 # Show running containers
 ps:
