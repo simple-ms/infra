@@ -55,17 +55,32 @@ services:
       interval: 5s
       retries: 10
 
-  # --- PGADMIN ---
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    environment:
-      PGADMIN_DEFAULT_EMAIL: sabuhi@mail.com
-      PGADMIN_DEFAULT_PASSWORD: sabuhi123
-    container_name: pgadmin
+  # --- REDIS ---
+  redis:
+    image: redis:8-alpine
+    container_name: redis
     ports:
-      - "5050:80"
+      - "6379:6379"
     # volumes:
-    #   - pgadmin_data:/var/lib/pgadmin
+    #   - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # --- PGADMIN ---
+  # pgadmin:
+  #   image: dpage/pgadmin4:latest
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: sabuhi@mail.com
+  #     PGADMIN_DEFAULT_PASSWORD: sabuhi123
+  #   container_name: pgadmin
+  #   ports:
+  #     - "5050:80"
+  #   # volumes:
+  #   #   - pgadmin_data:/var/lib/pgadmin
 
   # --- DATABASES ---
   auth-db:
@@ -195,10 +210,13 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:${ORDER_DB_PASSWORD:-postgres}@order-db:5432/order_db
       PRODUCT_API_URL: ${PRODUCT_API_URL:-http://product-api:8000}
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
     depends_on:
       order-db:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
@@ -219,3 +237,7 @@ services:
       kafka:
         condition: service_healthy
     command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# volumes:
+#   redis-data:
+#   pgadmin-data:
