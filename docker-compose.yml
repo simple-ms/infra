@@ -252,6 +252,7 @@ services:
     container_name: auth-celery-worker
     volumes:
       - ../auth/app:/app/app
+      - ../auth/entrypoint-celery.sh:/app/entrypoint-celery.sh
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:${AUTH_DB_PASSWORD:-postgres}@auth-db:5432/auth_db
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
@@ -265,6 +266,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    entrypoint: ["/app/entrypoint-celery.sh"]
     command: celery -A app.celery_app worker --loglevel=info --concurrency=2 -Q auth-tasks
   
   # Auth Service Celery Beat (Scheduler)
@@ -273,6 +275,7 @@ services:
     container_name: auth-celery-beat
     volumes:
       - ../auth/app:/app/app
+      - ../auth/entrypoint-celery.sh:/app/entrypoint-celery.sh
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:${AUTH_DB_PASSWORD:-postgres}@auth-db:5432/auth_db
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
@@ -284,6 +287,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    entrypoint: ["/app/entrypoint-celery.sh"]
     command: celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule
   
   # Order Service Celery Worker
