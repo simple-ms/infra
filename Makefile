@@ -23,7 +23,7 @@ help:
 
 # Start services
 up:
-	docker compose down -v
+# 	docker compose down -v
 	docker compose up --build
 
 # Start services with logging
