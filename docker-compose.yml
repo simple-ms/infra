@@ -1,20 +1,24 @@
 services:
-  # --- FRONTEND ---
-  frontend:
-    image: node:20-alpine
-    container_name: frontend
-    working_dir: /app
-    volumes:
-      - ../frontend:/app
-    command: sh -c "npm install -g http-server && http-server -p 3000"
-    ports:
-      - "3000:3000"
-    depends_on:
-      - auth-api
-      - user-api
-      - product-api
-      - order-api
-      - payment-api
+  # Frontend Service - COMMENTED OUT (focusing on backend deployment)
+  # frontend:
+  #   build:
+  #     context: ../frontend
+  #     dockerfile: Dockerfile
+  #   container_name: frontend
+  #   working_dir: /app
+  #   volumes:
+  #     - ../frontend:/app
+  #     - /app/node_modules
+  #   environment:
+  #     - VITE_API_BASE_URL=http://localhost
+  #   ports:
+  #     - "5173:5173"
+  #   depends_on:
+  #     - auth-api
+  #     - user-api
+  #     - product-api
+  #     - order-api
+  #     - payment-api
 
   # --- GATEWAY ---
   nginx-gateway:
