@@ -20,6 +20,17 @@ services:
   #     - order-api
   #     - payment-api
 
+  # API Tester - Simple HTML interface to test backend
+  api-tester:
+    build:
+      context: ../api-tester
+      dockerfile: Dockerfile
+    container_name: api-tester
+    ports:
+      - "5173:5173"
+    depends_on:
+      - nginx-gateway
+
   # --- GATEWAY ---
   nginx-gateway:
     image: nginx:alpine
