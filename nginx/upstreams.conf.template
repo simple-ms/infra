@@ -1,0 +1,27 @@
+# Service upstreams with environment variables
+# These will be substituted at container startup
+
+upstream auth_service {
+    server ${AUTH_SERVICE_HOST}:${AUTH_SERVICE_PORT};
+    keepalive 32;
+}
+
+upstream user_service {
+    server ${USER_SERVICE_HOST}:${USER_SERVICE_PORT};
+    keepalive 32;
+}
+
+upstream product_service {
+    server ${PRODUCT_SERVICE_HOST}:${PRODUCT_SERVICE_PORT};
+    keepalive 32;
+}
+
+upstream order_service {
+    server ${ORDER_SERVICE_HOST}:${ORDER_SERVICE_PORT};
+    keepalive 32;
+}
+
+upstream payment_service {
+    server ${PAYMENT_SERVICE_HOST}:${PAYMENT_SERVICE_PORT};
+    keepalive 32;
+}

@@ -37,11 +37,21 @@ services:
     container_name: nginx-gateway
     ports:
       - "80:80"
+    environment:
+      # Only CORS origin works with nginx env + map
+      # Service hosts must be changed in upstreams.conf for K8s
+      - CORS_ORIGIN=http://localhost:5173
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/logging.conf:/etc/nginx/logging.conf:ro
+      - ./nginx/security.conf:/etc/nginx/security.conf:ro
+      - ./nginx/env.defaults.conf:/etc/nginx/env.defaults.conf:ro
+      - ./nginx/performance.conf:/etc/nginx/performance.conf:ro
+      - ./nginx/timeouts.conf:/etc/nginx/timeouts.conf:ro
       - ./nginx/cors.conf:/etc/nginx/cors.conf:ro
       - ./nginx/upstreams.conf:/etc/nginx/upstreams.conf:ro
       - ./nginx/errors.conf:/etc/nginx/errors.conf:ro
+      - ./nginx/services:/etc/nginx/services:ro
     depends_on:
       - auth-api
       - user-api
@@ -114,6 +124,7 @@ services:
       POSTGRES_DB: auth_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-postgres}
+    command: postgres -c fsync=off -c full_page_writes=off
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -126,6 +137,7 @@ services:
       POSTGRES_DB: user_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${USER_DB_PASSWORD:-postgres}
+    command: postgres -c fsync=off -c full_page_writes=off
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -138,6 +150,7 @@ services:
       POSTGRES_DB: product_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${PRODUCT_DB_PASSWORD:-postgres}
+    command: postgres -c fsync=off -c full_page_writes=off
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -150,6 +163,7 @@ services:
       POSTGRES_DB: order_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${ORDER_DB_PASSWORD:-postgres}
+    command: postgres -c fsync=off -c full_page_writes=off
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -162,6 +176,7 @@ services:
       POSTGRES_DB: payment_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${PAYMENT_DB_PASSWORD:-postgres}
+    command: postgres -c fsync=off -c full_page_writes=off
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
